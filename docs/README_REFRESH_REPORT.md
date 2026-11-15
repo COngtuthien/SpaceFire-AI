@@ -151,4 +151,24 @@ One screenshot was added. The original twelve are unchanged and still referenced
 - **Partial status.** Verification kept one statement (Table 3 radii and durations) and removed one whose oxygen range
   ("0.39–0.40") is not in the cited table (0.385–0.399). The README caption states this.
 - **Evidence-only screenshot.** `research-copilot.webp` stays in the gallery. Its caption describes it as evidence-only
-  mode, the fallback.
+  mode, the fallback. *Replaced in the public release below.*
+
+## Update: public release (2026-11-15)
+
+Branch `release/spacefire-public-v1`. The gallery's `research-copilot.webp` was recaptured with a genuine successful
+OpenAI answer, replacing the evidence-only image. Evidence-only mode is still described in the README text (AI
+availability, Troubleshooting).
+
+| File | Route and state | Size | Dimensions |
+|---|---|---|---|
+| `research-copilot.webp` | `/copilot`, question "How does microgravity affect droplet combustion in the FLEX experiments?", status *Answered*, "All statements passed citation and number checks", "Written by gpt-4.1-mini-2025-04-14 in 4.1 s · 2 verified statements" | 155 KB | 1440 × 900 |
+
+- **Source of the answer.** The answer was generated live during the fresh-clone test. The release branch was cloned
+  from GitHub into an empty folder and set up with `setup.cmd`. A key was then added with `setup.cmd -SetOpenAIKey` and
+  the app started with `launch.cmd`.
+- **Cost.** One question was asked, which took one model request (no correction was needed). The cached answer was not
+  reused, because a fresh clone has no answer cache. The Copilot evidence differs as well: without the seven local-only
+  NASA folders, retrieval covers 20 documents instead of 50.
+- **Key check.** None of the 69 browser responses contained the key.
+- **Caption.** It notes that verification does not check attribution. The ~2 mm/s drift figure is quoted in the FLEX
+  requirements document from earlier droplet experiments (Nayagam et al., 1998).

@@ -7,7 +7,7 @@
 **An AI-powered research platform for exploring NASA microgravity combustion investigations through scientific data
 analysis, interactive 3D visualization, and evidence-grounded AI assistance.**
 
-[The Challenge](#the-challenge) · [Features](#key-features) ·
+[Quick Start](#quick-start-windows) · [The Challenge](#the-challenge) · [Features](#key-features) ·
 [Research Copilot](#research-copilot--powered-by-openai-gpt-41-mini) · [Gallery](#platform-preview) ·
 [NASA Datasets](#nasa-datasets) · [Architecture](#system-architecture) · [Run it locally](#installation-and-local-demo) ·
 [Limitations](#scientific-accuracy-and-limitations)
@@ -28,6 +28,38 @@ analysis, interactive 3D visualization, and evidence-grounded AI assistance.**
 | **Data** | Public NASA Physical Sciences Informatics (PSI) investigations: ten in total, across five scientific domains |
 
 > SpaceFire AI is an independent hackathon project. It is not affiliated with or endorsed by NASA.
+
+## Quick Start (Windows)
+
+You need Windows 10 or 11, [Python 3.11–3.13](https://www.python.org/downloads/) (tick *Add python.exe to PATH*),
+[Node.js 20 LTS or newer](https://nodejs.org/) and [Git](https://git-scm.com/). No GPU, no dataset download and no API
+key are required. In a Command Prompt, clone into a short folder path (at most 80 characters, for example
+`C:\SpaceFire-AI`), because Windows limits file paths to 260 characters:
+
+```bat
+cd /d C:\
+git clone https://github.com/COngtuthien/SpaceFire-AI.git
+cd SpaceFire-AI
+setup.cmd
+launch.cmd
+```
+
+- **`setup.cmd`** runs once. It checks the tools and installs the Python and npm packages. It also checks the NASA
+  data committed to the repository, builds the scientific database and builds the website. In our fresh-clone test it
+  took about 4 minutes, with the packages already in this PC's download cache. A first install has to download the Python and npm
+  packages (about 1.3 GB once installed), so it can take longer on a slow connection.
+- **`launch.cmd`** starts the API and the website and checks that both respond. It then opens **http://localhost:3000**.
+  Keep its window open; press **Ctrl+C** there to stop everything. If port 3000 or 8000 is busy, it picks the next free
+  port and prints the address.
+
+Then try the **Guided Demo** (`/demo`), the **Research-to-Safety Explorer** (`/safety-explorer`), the **Combustion
+Explorer** (`/experiments`), the **3D studios** (`/phenomena/...`) and the **Research Copilot** (`/copilot`).
+
+> [!IMPORTANT]
+> **AI answers need an OpenAI key, and none is included in this public repository.** On a fresh clone the Research
+> Copilot runs in **evidence-only mode**: it still retrieves and cites the NASA passages, but writes no AI text. To turn
+> on AI answers by GPT-4.1 mini, run `setup.cmd -SetOpenAIKey`, paste a key (the input is hidden; it is stored only in
+> your local, gitignored `.env`), and start `launch.cmd` again. See [AI availability](#ai-availability).
 
 ---
 
@@ -171,11 +203,11 @@ details and live test results are in [`docs/OPENAI_COPILOT_INTEGRATION.md`](docs
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/research-copilot.webp" alt="Research Copilot showing retrieved NASA evidence with page citations"></td>
+    <td width="50%"><img src="docs/assets/screenshots/research-copilot.webp" alt="Research Copilot live answer about FLEX droplet combustion written by gpt-4.1-mini, all statements verified"></td>
     <td width="50%"><img src="docs/assets/screenshots/guided-demo.webp" alt="Guided demo step 3 of 5 on the Gaseous Flame Behavior scenario"></td>
   </tr>
   <tr>
-    <td><sub><b>Research Copilot</b>, shown in <i>evidence-only mode</i> (the fallback when no AI key is configured or the model is unavailable): retrieved CFI-G Final Report passages with PDF page citations; nothing in this view is AI-written.</sub></td>
+    <td><sub><b>Research Copilot</b>: a live GPT-4.1 mini answer (<code>gpt-4.1-mini-2025-04-14</code>, written in 4.1 s) on a fresh clone of this repository with an OpenAI key added. The question is "How does microgravity affect droplet combustion in the FLEX experiments?". The answer is marked <i>Answered</i>: both statements passed citation and number checks against NASA sources. Attribution is not checked: the ~2 mm/s drift figure appears in the FLEX requirements document, which quotes it from earlier droplet experiments.</sub></td>
     <td><sub><b>Guided Demo</b>: step 3 of 5, "Explore NASA evidence", with presenter notes, evidence and limits for the scenario.</sub></td>
   </tr>
 </table>
@@ -255,21 +287,48 @@ flowchart LR
 
 ### Prerequisites
 
-- Python 3.11+ (tested on 3.13)
-- Node.js 20+ and npm
-- No GPU and no model downloads required. An OpenAI API key is optional; it is only needed for AI-written Copilot
-  answers.
+- Windows 10 or 11 (Linux and macOS scripts are also provided)
+- Python 3.11–3.13 (tested on 3.13), Node.js 20 LTS or newer with npm, and Git
+- About 2 GB of free disk space for the Python and npm packages. No GPU, no model download and no dataset download.
+- An OpenAI API key is optional. It is only needed for AI-written Copilot answers.
 
-### 1. Clone and configure (Windows CMD)
+### One-step setup and launch (Windows)
 
-```bat
-git clone https://github.com/COngtuthien/SpaceFire-AI.git
-cd SpaceFire-AI
-copy .env.example .env
-```
+The [Quick Start](#quick-start-windows) commands are all you need. Both scripts are plain wrappers around
+`scripts\setup.ps1` and `scripts\start.ps1`, run with `-ExecutionPolicy Bypass` for that process only, and both accept
+options:
 
-The backend reads `.env` from the repository root. To enable AI-written answers with the official OpenAI API, open
-`.env` (for example `notepad .env`) and set your own key:
+| Command | What it does |
+|---|---|
+| `setup.cmd` | Checks Python, Node.js, npm and Git. Creates `backend\.venv` and installs the Python packages, then installs the npm packages (`npm ci`). Checks the committed NASA data and creates `.env` from `.env.example` (an existing `.env` is never overwritten). Builds the database and the production website. Safe to run again. |
+| `setup.cmd -SetOpenAIKey` | Also asks for an OpenAI key (hidden input) and saves it in the local `.env` with `LLM_PROVIDER=openai` and `LLM_MODEL=gpt-4.1-mini`. The key is never printed. |
+| `setup.cmd -RebuildData` | Rebuilds `processed\spacefire.db` (stop the app first). |
+| `launch.cmd` | Starts the API (port 8000) and the website (port 3000), using the next free port if one is busy. It rebuilds the website only when it is missing, the code changed or the API port changed. It checks both health endpoints, reports whether AI answers are on and opens the browser. Ctrl+C stops both servers. |
+| `launch.cmd -Dev` | Uses the Next.js development server instead of the production build. |
+| `launch.cmd -Stop` | Stops servers left by an earlier `launch.cmd` window. Running `launch.cmd` twice does not start a second copy; it reports the running address instead. |
+
+Server logs are written to `.spacefire\` (gitignored).
+
+### AI availability
+
+| Situation | What the Research Copilot does |
+|---|---|
+| **Fresh clone, no key (default)** | **Evidence only.** It retrieves NASA passages, knowledge-graph facts and curated records with page-level citations, and explains why no AI text was written. |
+| **OpenAI key in `.env`** (`setup.cmd -SetOpenAIKey`) | **AI answers** by GPT-4.1 mini, grounded in the retrieved NASA evidence, with citations and numbers verified in code. Each new question costs one or two requests to the key's OpenAI project. Questions asked before are answered from the local answer cache. |
+| **Key expired or revoked, quota or billing exhausted, OpenAI unreachable** | Evidence only, with a plain message that names the cause. Gemini is never used as an automatic substitute. |
+
+- **No key in the repository.** This public repository contains no API key. A hosted demo server is not provided
+  either. AI answers on a reviewer's computer therefore need an OpenAI key entered locally, either the reviewer's own or
+  one the SpaceFire team provides privately.
+- **The team's key expires.** The project team's key, used for our live demonstration and screenshots, expires on
+  **22 November 2026**. After that date, AI answers need a different key. Every other feature keeps working without one.
+- **Billing.** The key's OpenAI project must have billing enabled. Requests are billed to that project. A key with a
+  spending limit and access restricted to `gpt-4.1-mini` is enough.
+
+### Configuring the AI provider manually
+
+The backend reads `.env` from the repository root. `setup.cmd -SetOpenAIKey` writes these lines for you; to edit them
+by hand, run `notepad .env`:
 
 ```dotenv
 LLM_PROVIDER=openai
@@ -278,98 +337,65 @@ OPENAI_API_KEY=your-openai-api-key
 LLM_TIMEOUT_S=45
 ```
 
-The key needs billing enabled on its OpenAI project. Requests are billed to that project.
-
 **Switching providers.** For Gemini, set `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.8-flash` and `GEMINI_API_KEY`.
 Each provider reads its own key variable and falls back to `LLM_API_KEY`. A key is sent only to the provider named in
-`LLM_PROVIDER`, and there is no automatic fallback between providers. Restart the backend after editing `.env`.
+`LLM_PROVIDER`, and there is no automatic fallback between providers. Restart `launch.cmd` after editing `.env`.
+`.env` is gitignored; never commit it or put a key in frontend code.
 
-Without a key, the Copilot runs in **evidence-only mode**: search, tools and citations still work, and no text is
-AI-written. `.env` is gitignored; never commit it or put a key in frontend code.
+### Using the application
 
-### 2. Backend setup and data build (Windows CMD)
+- **Website:** http://localhost:3000 (or the address `launch.cmd` prints). API documentation: http://127.0.0.1:8000/docs.
+- **Guided Demo:** http://localhost:3000/demo, or **Start guided demo** on the Home page. The demo bar walks through the
+  challenge, a research scenario, NASA evidence, a 3D studio and the Research Copilot, with presenter notes on each step.
+- **Research Copilot:** http://localhost:3000/copilot. With a key, the Copilot panel shows **AI synthesis on**, and each
+  answer names the model that wrote it ("Written by gpt-4.1-mini-…"). The active provider, model and mode are also
+  reported at http://127.0.0.1:8000/api/v1/health under `llm`. That response names the variable that supplied the key,
+  never the key itself.
+
+<details>
+<summary><b>Manual setup (Windows CMD), Linux/macOS scripts and alternate ports</b></summary>
+
+**Manual setup (Windows CMD)**, if you prefer not to use the scripts:
 
 ```bat
+copy .env.example .env
 cd backend
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python -m app.ingest.run
+cd ..\frontend
+npm ci
 ```
 
 `app.ingest.run` builds `processed/spacefire.db`, the search index and the knowledge graph from the files in the
-repository (about 15 s).
-
-### 3. Frontend setup (Windows CMD)
+repository (about 15 s). Then start the two servers in two CMD windows from the repository root:
 
 ```bat
-cd ..\frontend
-npm install
-```
-
-### 4. Run the application
-
-Open two CMD windows from the repository root.
-
-```bat
-:: Window 1 — backend API
+:: Window 1 - backend API
 cd backend
 .venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ```bat
-:: Window 2 — frontend (development mode)
+:: Window 2 - website (development mode; for production use "npm run build" then "npx next start --port 3000")
 cd frontend
 npx next dev --port 3000
 ```
 
-For a production build instead of development mode, run `npm run build` and then `npx next start --port 3000` in
-`frontend`. The frontend proxies `/api/v1` to `BACKEND_URL` (default `http://127.0.0.1:8000`).
-
-Open **http://localhost:3000**. The API documentation is at http://127.0.0.1:8000/docs.
-
-### 5. Ask the Research Copilot
-
-Open **http://localhost:3000/copilot**. With a key configured, the Copilot panel shows **AI synthesis on**, and each
-answer names the model that wrote it ("Written by gpt-4.1-mini-…"). The active provider, model and mode are also
-reported at http://127.0.0.1:8000/api/v1/health under `llm`. The response names the variable that supplied the key, never
-the key itself.
-
-### 6. Open the Guided Demo
-
-Go to **http://localhost:3000/demo**, or press **Start guided demo** on the Home page. The demo bar walks you through
-the challenge, a research scenario, NASA evidence, a 3D studio and the Research Copilot, with presenter notes on each
-step.
-
-<details>
-<summary><b>PowerShell, Linux/macOS scripts and alternate ports</b></summary>
-
-**PowerShell** (recommended one-step setup and start, backend on 8000 and frontend on 3000). `setup.ps1` installs
-the backend and frontend dependencies, creates `.env` from `.env.example` if it is missing, and builds the database:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
-notepad .env                                                        # add OPENAI_API_KEY (optional)
-powershell -ExecutionPolicy Bypass -File scripts\start.ps1          # add -Prod for a production build
-```
+The website proxies `/api/v1` to `BACKEND_URL` (default `http://127.0.0.1:8000`). In a production build that address is
+fixed when the site is built.
 
 **Linux / macOS:**
 
 ```bash
 bash scripts/setup.sh
-bash scripts/start.sh
+bash scripts/start.sh            # add --prod for a production build
 ```
 
-**Optional: running beside another local instance (Windows CMD).** The standard setup above uses ports 8000 and
-3000. To run a second copy alongside it, build into a separate folder and serve it on other ports:
+**Running beside another local instance.** `launch.cmd -BackendPort 8010 -FrontendPort 3010` runs on other ports
+(it rebuilds the site for the new API port). The manual equivalent builds into a separate folder:
 
 ```bat
-:: Backend on 8010
-cd backend
-.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8010
-```
-
-```bat
-:: Frontend on 3010, built once into .next-verify
 cd frontend
 set "NEXT_DIST_DIR=.next-verify"
 set "BACKEND_URL=http://127.0.0.1:8010"
@@ -377,11 +403,25 @@ npx next build
 npx next start --port 3010
 ```
 
-Run `npx next build` only once (or after code changes). Later runs can reuse the existing `.next-verify` build with
-only the two `set` lines and `npx next start`. A custom `NEXT_DIST_DIR` build may rewrite `frontend/tsconfig.json`;
-revert that change before committing.
+A custom `NEXT_DIST_DIR` build may rewrite `frontend/tsconfig.json`; revert that change before committing.
 
 </details>
+
+### Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `python` is not recognized, or typing it opens the Microsoft Store | Install Python 3.13 from python.org with *Add python.exe to PATH* ticked, open a new terminal and run `setup.cmd` again. |
+| `node` or `npm` is not recognized | Install Node.js LTS from nodejs.org, open a new terminal and run `setup.cmd` again. |
+| "running scripts is disabled on this system" | Use `setup.cmd` and `launch.cmd`. They bypass the execution policy for that one process only. |
+| "The repository folder path is too long", or pip fails with `No such file or directory` and a long-path hint | Windows limits paths to 260 characters. Clone into a short folder such as `C:\SpaceFire-AI` (at most 80 characters), delete the half-built `backend\.venv` and run `setup.cmd` again. Alternatively, [enable Windows long paths](https://pip.pypa.io/warnings/enable-long-paths). |
+| Package installation fails | Check the internet connection and run `setup.cmd` again (it resumes). On Python 3.14 or newer, install Python 3.13. |
+| Port 3000 or 8000 is already in use | `launch.cmd` picks the next free port and prints the address. To choose ports yourself, use `launch.cmd -FrontendPort 3100 -BackendPort 8100`. |
+| "SpaceFire AI is already running" | Use the printed address, or stop the other copy with Ctrl+C in its window or `launch.cmd -Stop`. |
+| The website build fails or the computer runs out of memory | Close other programs and run `launch.cmd -Rebuild`, or use `launch.cmd -Dev` (no build). |
+| The Copilot shows "Evidence only" | No key is set, or the key was rejected or is out of quota (the Copilot names the cause). Run `setup.cmd -SetOpenAIKey` and restart `launch.cmd`. Check `llm.mode` at http://127.0.0.1:8000/api/v1/health. |
+| API health is "degraded" or data is missing | Stop the app (`launch.cmd -Stop`) and run `setup.cmd -RebuildData`. |
+| Anything else | Look at `.spacefire\backend.log` and `.spacefire\frontend.log`. |
 
 ### What a fresh clone includes
 
@@ -390,9 +430,11 @@ revert that change before committing.
 | FLEX, BASS-II and SAFFIRE-I source folders (data and documents) | Source folders of the seven other investigations (`ACME CFI-G/`, `ACME Flame Design/`, `ACME BRE/`, `SAME/`, `PSI-117/`, `FLEX-2/`, `PSI-62/`) |
 | Verified, curated derivatives of all seven in `processed/curated/phase13/` | Their 30 report and document files for full-text search |
 
-Every structured dataset, chart, Explorer collection and 3D studio works from a fresh clone. Full-text document search
-and Copilot passages for the seven Phase 13 investigations need their original NASA files, which can be downloaded from
-the PSI links in the dataset table. Rebuilding the curated tables from those folders uses
+Every structured dataset, chart, Explorer collection and 3D studio works from a fresh clone, and `setup.cmd` checks
+that the committed data is present. Full-text document search and Copilot passages for the seven Phase 13
+investigations need their original NASA files. These can be downloaded from the PSI links in the dataset table into
+folders with the names above, followed by `setup.cmd -RebuildData`. Without them, Copilot answers cite the FLEX, BASS-II
+and SAFFIRE-I reports, the curated records and the knowledge graph. Rebuilding the curated tables from those folders uses
 `python -m app.ingest.phase13.run`.
 
 ### Tests
@@ -426,6 +468,8 @@ SpaceFire AI supports **scientific exploration and interpretation**. It is not a
 - **AI verification checks citations and numbers, not reasoning or attribution.** A generated statement is not
   guaranteed to be correct, even when it passes verification. Provider quotas, billing limits or timeouts can block
   AI-written answers; the Copilot then falls back to evidence only.
+- **AI answers depend on a locally configured key.** No key ships with the repository, and the team's key expires on
+  22 November 2026 ([AI availability](#ai-availability)).
 
 ## Project Structure
 
@@ -451,6 +495,7 @@ SpaceFire-AI/
 ├── docs/                    # methods, design notes, phase reports, screenshots
 ├── scripts/                 # setup / start / smoke-test scripts
 ├── FLEX/  BASS-II/  SAFFIRE-1/   # NASA PSI source data (read-only)
+├── setup.cmd  launch.cmd    # one-step Windows setup and start (wrappers for scripts/*.ps1)
 └── .env.example
 ```
 
