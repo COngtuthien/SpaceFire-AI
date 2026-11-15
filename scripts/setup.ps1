@@ -30,9 +30,9 @@ function Fail([string]$msg, [string]$hint) {
 function Probe([string]$exe, [string[]]$argv) {
   if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { return $null }
   try {
-    $out = & $exe @argv 2>$null | Select-Object -First 1
-    if ($LASTEXITCODE -ne 0) { return $null }
-    return "$out".Trim()
+    $out = @(& $exe @argv 2>$null)   # collect everything first: stopping a native pipeline early throws in PS 5.1
+    if ($LASTEXITCODE -ne 0 -or $out.Count -eq 0) { return $null }
+    return "$($out[0])".Trim()
   } catch { return $null }
 }
 
@@ -48,7 +48,7 @@ foreach ($c in @(@("python"), @("py", "-3"), @("python3"))) {
 }
 if (-not $pyCmd) { Fail "Python was not found." "Install Python 3.11-3.13 from https://www.python.org/downloads/ (tick 'Add python.exe to PATH'), open a new terminal and run setup.cmd again." }
 if ($pyVer -lt [version]"3.11") { Fail "Python $pyVer is too old (3.11 or newer is required)." "Install Python 3.13 from https://www.python.org/downloads/." }
-Ok "Python $pyVer ($pyCmd $($pyArgs -join ' '))"
+Ok "Python $pyVer ($((@($pyCmd) + $pyArgs) -join ' '))"
 if ($pyVer -ge [version]"3.14") { Note "SpaceFire is tested on Python 3.13; if package installation fails, install Python 3.13." }
 
 $nodeV = Probe "node" @("--version")
@@ -60,6 +60,15 @@ if (-not $npmV) { Fail "npm was not found." "Reinstall Node.js from https://node
 Ok "npm $npmV"
 $gitV = Probe "git" @("--version")
 if ($gitV) { Ok $gitV } else { Note "Git was not found. It is only needed to clone or update the repository." }
+
+# Windows limits file paths to 260 characters unless long paths are enabled. The deepest Python package file is about
+# 172 characters below the repository folder, so a long folder path makes pip fail halfway with "No such file".
+$longPaths = $false
+try { $longPaths = ((Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -ErrorAction Stop).LongPathsEnabled -eq 1) } catch { $longPaths = $false }
+if (-not $longPaths -and $root.Length -gt 80) {
+  Fail "The repository folder path is too long ($($root.Length) characters; at most 80 work while Windows long paths are disabled)." "Clone into a shorter folder, for example:  cd /d C:\  then  git clone https://github.com/COngtuthien/SpaceFire-AI.git  and run setup.cmd in C:\SpaceFire-AI. (Alternatively enable long paths: https://pip.pypa.io/warnings/enable-long-paths)"
+}
+Ok "folder path length $($root.Length) characters$(if ($longPaths) { ' (Windows long paths enabled)' })"
 
 # --- 2. Backend ----------------------------------------------------------------------------------------------------
 Step "Backend: Python virtual environment and packages"
