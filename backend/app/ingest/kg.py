@@ -463,8 +463,9 @@ def build(conn: sqlite3.Connection) -> dict:
         for f in (jloads(row[0], {}).get("extra", {}).get("findings", []) if row else []):
             cid = g.node(f"claim:{f['id']}", "claim", f["text"], inv, page_pdf=f.get("page_pdf"), kind=f.get("kind"),
                          values=f.get("values", []), evidence="report_statement", document_id=doc_id)
-            g.edge(cid, "SUPPORTED_BY", f"doc:{doc_id}", "documented_text",
-                   f"{doc_id}#page={f.get('page_pdf')}", page_pdf=f.get("page_pdf"))
+            if f"doc:{doc_id}" in g.nodes:   # the report file is local-only: absent from a fresh clone (page ref stays)
+                g.edge(cid, "SUPPORTED_BY", f"doc:{doc_id}", "documented_text",
+                       f"{doc_id}#page={f.get('page_pdf')}", page_pdf=f.get("page_pdf"))
             g.edge(f"inv:{inv}", "REPORTS", cid, "documented_text", f"{doc_id}#page={f.get('page_pdf')}")
 
     # ---- write -------------------------------------------------------------------------------------------------
