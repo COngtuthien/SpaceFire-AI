@@ -12,7 +12,7 @@ const STEP_NOTES: Record<number, (s: DemoScenario) => string[]> = {
   2: (s) => [`Four research scenarios. This demo follows ${JOURNEYS[s].letter}: ${JOURNEYS[s].label}. Pick another below if you like.`],
   3: (s) => JOURNEYS[s].notes[3],
   4: (s) => JOURNEYS[s].notes[4],
-  5: () => [`The question is only pre-filled: pressing Ask sends it (Gemini if configured, otherwise evidence only).`,
+  5: () => [`The question is only pre-filled: pressing Ask sends it (the configured AI model if one is set, otherwise evidence only).`,
     `Try an unsupported one too, e.g. “Can SpaceFire certify that an untested polymer is safe?”: it abstains without calling the model.`],
 };
 

@@ -31,3 +31,6 @@ frontend/blob-report/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local run state and logs written by scripts/start.ps1
+.spacefire/

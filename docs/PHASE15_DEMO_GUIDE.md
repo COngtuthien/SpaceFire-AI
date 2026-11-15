@@ -130,8 +130,9 @@ The demo never sends a Copilot question by itself; a browser test checks that no
 
 ## Offline fallback and recovery
 
-- **Gemini off, over quota or failing (503/504).** The Copilot answers "Evidence only": retrieved NASA passages, knowledge
-  graph items and computed analyses, with a plain-language notice. The demo does not depend on Gemini.
+- **AI provider off, over quota or failing (OpenAI by default; timeouts, 429, 5xx).** The Copilot answers "Evidence
+  only": retrieved NASA passages, knowledge graph items and computed analyses, with a plain-language notice. The demo
+  does not depend on the AI provider.
 - **Unsupported question.** For example "Can SpaceFire certify that an untested polymer is safe?". The Copilot abstains
   without calling the model, which works offline too.
 - **Backend down.** Pages show an error with a retry. Check with `curl http://127.0.0.1:8010/api/v1/health`, then restart

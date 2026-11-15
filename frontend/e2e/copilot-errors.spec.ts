@@ -61,7 +61,7 @@ test.describe("Copilot errors and fallback", () => {
   for (const [kind, text, retry] of [
     ["unavailable", /temporarily unavailable \(Google reports it as overloaded or unreachable\)/, true],
     ["timeout", /did not respond in time/, true],
-    ["auth", /rejected the configured credentials \(check LLM_API_KEY/, false],
+    ["auth", /rejected the configured credentials \(check the provider key in \.env: OPENAI_API_KEY/, false],
     ["bad_request", /could not use the configured model or request \(check LLM_MODEL/, false],
     ["rate_limit", /free request quota is used up for now\. It should be available again in about 90 s\./, false],
   ] as const) {

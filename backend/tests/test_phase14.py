@@ -33,6 +33,42 @@ def test_graph_edges_are_unique_sourced_and_reference_existing_nodes(conn):
     assert bad == []
 
 
+def test_graph_builds_when_local_only_reports_are_absent(tmp_path):
+    """A fresh clone has no ACME Flame Design or BRE report files (their NASA folders are local-only), so those documents
+    are not ingested. The report claims must still load, linked to their investigation, without a SUPPORTED_BY edge to a
+    document node that does not exist. Regression: the graph build stopped with an AssertionError on a fresh clone."""
+    import sqlite3
+
+    from app.db.database import connect
+    from app.ingest import kg
+
+    from .conftest import TEST_DB
+
+    fresh = tmp_path / "fresh.db"
+    src, dst = sqlite3.connect(TEST_DB), sqlite3.connect(fresh)
+    src.backup(dst)
+    src.close()
+    missing = ("psi-10-reports-finalrpt-acmeflamedesign", "bre-final-report-20220201")
+    dst.execute("PRAGMA foreign_keys=OFF")
+    dst.execute("DELETE FROM documents WHERE document_id IN (?,?)", missing)
+    dst.commit()
+    dst.close()
+    c = connect(fresh)
+    try:
+        rep = kg.build(c)
+        claims = {r[0] for r in c.execute("SELECT node_id FROM kg_nodes WHERE node_type='claim'")}
+        assert claims and rep["edges"] > 0
+        assert not c.execute("SELECT count(*) FROM kg_edges WHERE rel='SUPPORTED_BY' AND dst IN (?,?)",
+                             tuple(f"doc:{m}" for m in missing)).fetchone()[0]
+        reported = {r[0] for r in c.execute("SELECT dst FROM kg_edges WHERE rel='REPORTS'")}
+        assert claims <= reported   # every claim is still attached to its investigation
+        # page references survive on the claim itself
+        props = [jloads(r[0], {}) for r in c.execute("SELECT props_json FROM kg_nodes WHERE node_type='claim'")]
+        assert all(p.get("document_id") in missing for p in props)
+    finally:
+        c.close()
+
+
 def test_experiment_counts_match_the_source_tables(conn):
     def members(inv, typ="experiment"):
         return conn.execute("SELECT count(*) FROM kg_edges e JOIN kg_nodes n ON n.node_id=e.src WHERE e.rel='BELONGS_TO' "

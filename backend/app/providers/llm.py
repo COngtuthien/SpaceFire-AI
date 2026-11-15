@@ -92,6 +92,119 @@ class AnthropicProvider:
             raise LLMError("bad_output", "LLM did not return valid JSON.")
 
 
+class OpenAIProvider:
+    """OpenAI Chat Completions via the official `openai` SDK (default endpoint https://api.openai.com/v1).
+
+    The answer is constrained by Structured Outputs (`response_format` json_schema, strict), so the reply is the same
+    JSON object the verifier expects from every provider. The key is handed to the SDK (sent as a Bearer header); it is
+    not stored on this object, logged, or included in any error message.
+
+    Demo-oriented limits: one attempt per call (`max_retries=0`: a failed call already took its time, and the answer
+    service then shows the retrieved evidence instead), a per-call timeout from LLM_TIMEOUT_S, an output cap from
+    LLM_MAX_OUTPUT_TOKENS and `store=False`. There is no automatic fallback to another provider.
+    """
+
+    name = "openai"
+    DEFAULT_BASE_URL = "https://api.openai.com/v1"
+
+    def __init__(self, api_key: str, model: str, timeout_s: float, base_url: str = "", max_output_tokens: int = 2000,
+                 temperature: float | None = 0.2, client: Any = None):
+        import openai
+
+        self._openai = openai
+        self.model = model
+        self.timeout_s = float(timeout_s)
+        self.max_output_tokens = int(max_output_tokens)
+        self.temperature = temperature if temperature is not None and temperature >= 0 else None
+        self.last_call: dict[str, Any] | None = None
+        if client is None:
+            import httpx
+
+            # Explicit base URL: an OPENAI_BASE_URL left in the shell must not silently redirect the key elsewhere.
+            client = openai.OpenAI(api_key=api_key, base_url=base_url or self.DEFAULT_BASE_URL, max_retries=0,
+                                   timeout=httpx.Timeout(self.timeout_s, connect=min(10.0, self.timeout_s)))
+        self.client = client
+
+    def _map_error(self, e: Exception) -> LLMError:
+        o = self._openai
+        code = getattr(e, "status_code", None)
+        if isinstance(e, o.AuthenticationError):
+            return LLMError("auth", "OpenAI rejected the API key (HTTP 401): check OPENAI_API_KEY.")
+        if isinstance(e, o.PermissionDeniedError):
+            return LLMError("auth", f"OpenAI denied access (HTTP 403): the key's project may not be allowed to use "
+                                    f"'{self.model}', or the request region is not supported.")
+        if isinstance(e, o.NotFoundError):
+            return LLMError("bad_request", f"OpenAI model '{self.model}' is not available to this API key's project.")
+        if isinstance(e, o.RateLimitError):
+            if getattr(e, "code", None) == "insufficient_quota":
+                return LLMError("rate_limit", "OpenAI reports insufficient quota (HTTP 429 insufficient_quota): the "
+                                              "account has no remaining credit; check billing for the key's project.",
+                                600.0)
+            return LLMError("rate_limit", "OpenAI rate limit reached (HTTP 429).", _header_retry_after(e))
+        if isinstance(e, o.BadRequestError):
+            return LLMError("bad_request", f"OpenAI rejected the request (HTTP 400): {str(getattr(e, 'message', ''))[:300]}")
+        if isinstance(e, o.APITimeoutError):
+            return LLMError("timeout", f"OpenAI request timed out after {self.timeout_s:.0f} s.")
+        if isinstance(e, o.APIStatusError):
+            return LLMError("unavailable", f"OpenAI service error (HTTP {code}).")
+        if isinstance(e, o.APIConnectionError):
+            return LLMError("unavailable", "Could not reach the OpenAI API.")
+        return LLMError("unavailable", f"OpenAI call failed ({type(e).__name__}).")
+
+    def generate_json(self, system: str, user: str, schema: dict, max_tokens: int = 16000) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "response_format": {"type": "json_schema",
+                                "json_schema": {"name": "spacefire_answer", "schema": schema, "strict": True}},
+            "max_completion_tokens": min(int(max_tokens), self.max_output_tokens),
+            "store": False,
+        }
+        if self.temperature is not None:
+            params["temperature"] = self.temperature
+        t0 = time.perf_counter()
+        try:
+            raw = self.client.chat.completions.with_raw_response.create(**params)
+            resp = raw.parse()
+        except self._openai.OpenAIError as e:
+            raise self._map_error(e) from None
+        ms = int((time.perf_counter() - t0) * 1000)
+        usage = getattr(resp, "usage", None)
+        self.last_call = {"model_version": getattr(resp, "model", None) or self.model, "latency_ms": ms,
+                          "http_status": getattr(raw, "status_code", None),
+                          "request_id": (getattr(raw, "headers", None) or {}).get("x-request-id"),
+                          "input_tokens": getattr(usage, "prompt_tokens", None),
+                          "output_tokens": getattr(usage, "completion_tokens", None)}
+        choice = (getattr(resp, "choices", None) or [None])[0]
+        finish = getattr(choice, "finish_reason", None)
+        msg = getattr(choice, "message", None)
+        log.info("llm call provider=openai model=%s ms=%s finish=%s in=%s out=%s request_id=%s",
+                 self.last_call["model_version"], ms, finish, self.last_call["input_tokens"],
+                 self.last_call["output_tokens"], self.last_call["request_id"])
+        if getattr(msg, "refusal", None) or finish == "content_filter":
+            raise LLMError("refusal", "The model declined to answer this request.")
+        if finish == "length":
+            raise LLMError("bad_output", "LLM output was truncated (raise LLM_MAX_OUTPUT_TOKENS).")
+        text = getattr(msg, "content", None) or ""
+        if not text.strip():
+            raise LLMError("bad_output", "LLM returned an empty response.")
+        try:
+            data = json.loads(text)
+        except ValueError:
+            raise LLMError("bad_output", "LLM did not return valid JSON.") from None
+        if not isinstance(data, dict):
+            raise LLMError("bad_output", "LLM JSON was not an object.")
+        return data
+
+
+def _header_retry_after(e) -> float | None:
+    try:
+        ra = getattr(getattr(e, "response", None), "headers", {}).get("retry-after")
+        return float(ra) if ra else None
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
 _RETRY_DELAY_RE = re.compile(r"^(\d+(?:\.\d+)?)s$")
 # Candidate finish reasons that mean the model (or a safety filter) declined to produce the answer.
 _GEMINI_REFUSALS = {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY", "LANGUAGE"}
@@ -245,7 +358,7 @@ def _gemini_retry_after(e) -> float | None:
         return None
 
 
-PROVIDERS = {"anthropic": "anthropic", "gemini": "google.genai"}  # provider name -> SDK module it needs
+PROVIDERS = {"anthropic": "anthropic", "gemini": "google.genai", "openai": "openai"}  # provider name -> SDK module it needs
 
 _override: LLMProvider | None = None
 _override_set = False
@@ -279,14 +392,18 @@ def get_llm() -> LLMProvider | None:
             log.warning("LLM_PROVIDER=%s unavailable (no adapter or SDK missing); assistant runs retrieval-only", p)
         return None
     # One client per configuration (connection reuse); the key is part of the identity but never logged.
-    ident = (p, s.llm_model, s.llm_timeout_s, s.llm_base_url, s.llm_thinking_level, hash(s.llm_api_key))
+    key = s.llm_key  # the selected provider's own key (or LLM_API_KEY); never another provider's key
+    ident = (p, s.llm_model, s.llm_timeout_s, s.llm_base_url, s.llm_thinking_level, s.llm_max_output_tokens,
+             s.llm_temperature, hash(key))
     if _cached and _cached[0] == ident:
         return _cached[1]
     if p == "gemini":
-        prov: LLMProvider = GeminiProvider(s.llm_api_key, s.llm_model, s.llm_timeout_s, s.llm_base_url,
-                                           s.llm_thinking_level)
+        prov: LLMProvider = GeminiProvider(key, s.llm_model, s.llm_timeout_s, s.llm_base_url, s.llm_thinking_level)
+    elif p == "openai":
+        prov = OpenAIProvider(key, s.llm_model, s.llm_timeout_s, s.llm_base_url, s.llm_max_output_tokens,
+                              s.llm_temperature)
     else:
-        prov = AnthropicProvider(s.llm_api_key, s.llm_model, s.llm_timeout_s, s.llm_base_url)
+        prov = AnthropicProvider(key, s.llm_model, s.llm_timeout_s, s.llm_base_url)
     _cached = (ident, prov)
     return prov
 
@@ -343,12 +460,14 @@ def _llm_status() -> dict:
                 "reason": None if _override else "LLM disabled for this process."}
     if not s.llm_configured:
         return {"configured": False, "provider": s.llm_provider, "model": s.llm_model, "mode": "retrieval_only",
-                "reason": "LLM_API_KEY is not set. Set LLM_PROVIDER, LLM_MODEL and LLM_API_KEY in .env to enable "
-                          "AI synthesis. Search, tools and citations work without it."}
+                "reason": "No API key is set for this provider (LLM_API_KEY, or OPENAI_API_KEY / GEMINI_API_KEY for "
+                          "those providers). Set LLM_PROVIDER, LLM_MODEL and the key in .env to enable AI synthesis. "
+                          "Search, tools and citations work without it."}
     if p not in PROVIDERS:
         return {"configured": False, "provider": s.llm_provider, "model": s.llm_model, "mode": "retrieval_only",
                 "reason": f"LLM_PROVIDER '{s.llm_provider}' has no adapter; supported: {', '.join(PROVIDERS)}."}
     if _sdk_missing(p):
         return {"configured": False, "provider": s.llm_provider, "model": s.llm_model, "mode": "retrieval_only",
                 "reason": f"The Python SDK for '{p}' is not installed (pip install -r backend/requirements.txt)."}
-    return {"configured": True, "provider": s.llm_provider, "model": s.llm_model, "mode": "synthesis", "reason": None}
+    return {"configured": True, "provider": s.llm_provider, "model": s.llm_model, "mode": "synthesis", "reason": None,
+            "key_source": s.llm_key_source}  # the variable name only, never the value

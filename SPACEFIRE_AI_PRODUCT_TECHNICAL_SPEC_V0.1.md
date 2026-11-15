@@ -4,7 +4,7 @@
 **Date:** 2026-11-10  
 **Status:** REVIEW ONLY — **KHÔNG phải lệnh bắt đầu triển khai**  
 **Challenge:** NASA Space Apps Challenge 2026 — *Flame in Freefall: AI-Powered Fire Safety Insights from Microgravity Combustion Data*  
-**Working repository:** `COngtuthien/NASA-Hackathon`, local `D:\NASA Hackathon`  
+**Working repository:** `COngtuthien/SpaceFire-AI` (renamed from `NASA-Hackathon`), local `D:\NASA Hackathon`  
 **Product name (proposed):** SpaceFire AI — *Evidence-Grounded Microgravity Combustion Intelligence*
 
 > **Cách đọc:** `[P0]` phải có ở MVP, `[P1]` làm khi P0 ổn định, `[P2]` là mở rộng. `[DECISION]` là quyết định cần người dùng duyệt. `[SOURCE]` là thực tế rút từ 10 báo cáo Claude Code; `[PROPOSAL]` là thiết kế mới đề xuất, chưa được lập trình hoặc xác thực.

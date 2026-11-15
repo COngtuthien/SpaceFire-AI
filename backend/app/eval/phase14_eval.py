@@ -63,6 +63,8 @@ def score_one(res: dict, exp: dict) -> dict:
 
 def run(path: Path = GOLDEN) -> dict:
     os.environ["LLM_API_KEY"] = ""
+    os.environ["OPENAI_API_KEY"] = ""
+    os.environ["GEMINI_API_KEY"] = ""
     from ..core.config import get_settings
     get_settings.cache_clear()
     from ..db.database import connect
