@@ -204,7 +204,7 @@ const GLANCE = [
 ];
 
 const LIMITS = [
-  "The language model is optional and limited by the provider's quota; on the Gemini free tier this is 20 requests per day for the configured model, after which answers are evidence only until the reset.",
+  "The language model is optional and limited by the provider's quota, billing and response time (for example, the Gemini free tier allows 20 requests per day); when it is unavailable, answers are evidence only.",
   "The verifier checks citations and numbers, not reasoning. A statement can cite the right passage and still over-generalize; claims are labelled by kind so readers can weigh them.",
   "Retrieval is lexical + LSA by default; a passage that uses different wording than the question can be missed, and the answer then says the evidence is insufficient.",
   "BASS-II report-only values (spread rates, burn times, outcomes) are transcriptions; report figures are not digitized.",

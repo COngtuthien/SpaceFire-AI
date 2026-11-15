@@ -21,7 +21,7 @@ scientific data exploration, interactive 3D visualization and evidence-grounded 
 |---|---|
 | **Event** | NASA Space Apps Challenge 2026: *Flame in Freefall: AI-Powered Fire Safety Insights from Microgravity Combustion Data* |
 | **Research area** | Microgravity combustion, spacecraft fire safety, scientific data exploration |
-| **Built with** | Next.js · React · TypeScript · three.js · FastAPI · Python · SQLite · Gemini (optional) |
+| **Built with** | Next.js · React · TypeScript · three.js · FastAPI · Python · SQLite · OpenAI or Gemini (optional) |
 | **Data** | Public NASA Physical Sciences Informatics (PSI) investigations: ten in total, across five scientific domains |
 
 > SpaceFire AI is an independent hackathon project. It is not affiliated with or endorsed by NASA.
@@ -67,7 +67,7 @@ NASA investigations  →  curated scientific data  →  research exploration  �
 | **Combustion & Fire Science Explorer** | Browse records and research collections from all ten investigations across five scientific domains, with dataset-specific filters, provenance on every record, and side-by-side comparison only where records are compatible. | `/experiments` |
 | **Interactive 3D Studios** | Five studios (droplet flame, flame spread, spacecraft fire, gaseous flame, smoke detection). They explain each phenomenon with play/pause, guided timelines, Earth vs microgravity views, part labels and a fullscreen mode. Measured NASA values appear in a separate evidence panel. | `/phenomena/*#studio` |
 | **Scientific Analysis** | Investigate source-backed measurements: the FLEX extinction map, d²-law consistency check, BASS-II report tables, CFI-G outcomes and cool-flame events, SAME particle sizes, and PSI-117 experiment vs model series. | `/phenomena/*` |
-| **Research Copilot** | Ask a scientific question. It retrieves NASA document passages, curated records and knowledge-graph facts. With a Gemini key it writes an answer whose citations and numbers are verified in code; without one it shows the evidence only. It declines safety-certification and prediction requests. | `/copilot` |
+| **Research Copilot** | Ask a scientific question. It retrieves NASA document passages, curated records and knowledge-graph facts. With an OpenAI or Gemini key it writes an answer whose citations and numbers are verified in code; without one it shows the evidence only. It declines safety-certification and prediction requests. | `/copilot` |
 | **Find Similar Experiments** | Find tests with similar *starting conditions* (Gower distance) in FLEX, BASS-II or ACME CFI-G. This searches only the locally processed NASA records, **not Google or the internet**, and never uses outcomes to measure similarity. | `/intelligence/similar` |
 | **Scientific Media & Document Evidence** | Search NASA reports with page-level citations, look up external literature (NASA NTRS, OpenAlex, Crossref), and browse 15 verified NASA photos, clips and animations, each credited and labelled. | `/evidence`, `/evidence/media` |
 | **Guided Demo** | Follow a five-step presentation through the challenge, a research scenario, NASA evidence, a 3D studio and the Copilot. A six-step guide is also available inside the Combustion Explorer. | `/demo` |
@@ -180,7 +180,7 @@ Methods and evidence rules are described in [`docs/SCIENTIFIC_METHODS.md`](docs/
 | **Backend** | Python 3.11+ (tested on 3.13), FastAPI, Uvicorn, Pydantic |
 | **Scientific data** | pandas, NumPy, SciPy, scikit-learn; PyMuPDF, python-docx, python-pptx and openpyxl for source documents |
 | **Storage & retrieval** | SQLite with FTS5 (BM25) + local LSA semantic index; provenance-tracked knowledge graph in SQLite |
-| **AI** | Google Gemini via `google-genai` (optional; Anthropic Claude also supported), with in-code claim and citation verification |
+| **AI** | OpenAI via the official `openai` SDK (default `gpt-4.1-mini`) or Google Gemini via `google-genai` (optional; Anthropic Claude also supported), with in-code claim and citation verification |
 | **External literature** | NASA NTRS, OpenAlex, Crossref (metadata only) |
 | **Testing** | pytest, respx, Playwright |
 
@@ -195,7 +195,7 @@ flowchart LR
     D --> E
     E --> F["Scientific services<br/>analytics · explorer · similarity"]
     E --> G["Research Copilot<br/>retrieval + verified synthesis"]
-    G -. optional .-> H["Gemini"]
+    G -. optional .-> H["OpenAI or Gemini"]
     F --> I["Next.js interface"]
     G --> I
     I --> J["Interactive 3D studios<br/>three.js"]
@@ -216,7 +216,7 @@ flowchart LR
 
 - Python 3.11+ (tested on 3.13)
 - Node.js 20+ and npm
-- No GPU and no model downloads required. A Gemini API key is optional.
+- No GPU and no model downloads required. An OpenAI or Gemini API key is optional.
 
 ### 1. Clone and configure (Windows CMD)
 
@@ -229,10 +229,13 @@ copy .env.example .env
 All settings in `.env` are optional. To enable AI-written answers, set your own key:
 
 ```ini
-LLM_PROVIDER=gemini
-LLM_MODEL=gemini-3.8-flash
-LLM_API_KEY=<your-google-ai-studio-key>
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=<your-openai-api-key>
 ```
+
+For Gemini instead, use `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.8-flash` and `GEMINI_API_KEY`. Each key is sent
+only to the provider named in `LLM_PROVIDER`, and there is no automatic fallback between providers.
 
 Without a key, the Copilot runs in **evidence-only mode**: search, tools and citations still work, and no text is
 AI-written. Never commit `.env`.
@@ -363,8 +366,8 @@ SpaceFire AI supports **scientific exploration and interpretation**. It is not a
   fire predictions.
 - **The FLEX Burn-Time Estimator is exploratory.** It is a statistical estimate within FLEX conditions (median error
   about 35 %), not a validated physical simulation ([`docs/PHASE16_PREDICTION_REVIEW.md`](docs/PHASE16_PREDICTION_REVIEW.md)).
-- **AI verification checks citations and numbers, not reasoning.** Free-tier Gemini quotas can limit AI-written
-  answers; the Copilot then falls back to evidence only.
+- **AI verification checks citations and numbers, not reasoning.** Provider quotas, billing limits or timeouts can
+  block AI-written answers; the Copilot then falls back to evidence only.
 
 ## Project Structure
 
@@ -375,7 +378,7 @@ NASA-Hackathon/
 │   │   ├── api/v1/          # FastAPI routes
 │   │   ├── ingest/          # deterministic parsing, curation, knowledge graph build
 │   │   ├── services/        # analytics, explorer, combustion, similarity, retrieval, assistant, ml
-│   │   ├── providers/       # LLM (Gemini, Anthropic) and scholarly search clients
+│   │   ├── providers/       # LLM (OpenAI, Gemini, Anthropic) and scholarly search clients
 │   │   ├── curation/        # reviewed evidence links
 │   │   └── eval/            # retrieval and AI evaluation harnesses
 │   └── tests/               # pytest suite

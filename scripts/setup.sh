@@ -12,7 +12,7 @@ echo "== Frontend: npm dependencies"
 (cd frontend && npm install)
 
 if [ ! -f .env ]; then cp .env.example .env; echo "== Created .env from .env.example"; fi
-grep -Eq '^LLM_API_KEY=\S+' .env || echo "WARNING: LLM_API_KEY is empty: assistant runs in retrieval-only mode (all other features work)."
+grep -Eq '^(LLM_API_KEY|OPENAI_API_KEY|GEMINI_API_KEY)=\S+' .env || echo "WARNING: no LLM key is set (OPENAI_API_KEY, GEMINI_API_KEY or LLM_API_KEY): assistant runs in retrieval-only mode (all other features work)."
 
 echo "== Ingesting NASA data (read-only on source folders)"
 (cd backend && PYTHONIOENCODING=utf-8 .venv/bin/python -m app.ingest.run)

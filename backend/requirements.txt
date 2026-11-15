@@ -15,6 +15,7 @@ defusedxml==0.7.1
 httpx==0.28.1
 anthropic==2.7.0
 google-genai==3.1.0
+openai==3.51.0
 # tests
 pytest==9.2.0
 respx==0.23.1

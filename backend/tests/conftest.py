@@ -25,6 +25,8 @@ if REAL_DB.exists():
     shutil.copy2(REAL_DB, TEST_DB)
 os.environ["DATABASE_PATH"] = str(TEST_DB)
 os.environ["LLM_API_KEY"] = ""
+os.environ["OPENAI_API_KEY"] = ""  # provider-specific keys in the local .env must never reach a test
+os.environ["GEMINI_API_KEY"] = ""
 os.environ["LLM_CACHE_TTL_HOURS"] = "0"  # tests opt in to the answer cache explicitly
 os.environ["EXTERNAL_SEARCH_ENABLED"] = "true"
 

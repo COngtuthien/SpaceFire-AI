@@ -21,8 +21,8 @@ if (-not (Test-Path ".env")) {
   Write-Host "== Created .env from .env.example"
 }
 $envText = Get-Content ".env" -Raw
-if ($envText -notmatch "(?m)^LLM_API_KEY=\S+") {
-  Write-Warning "LLM_API_KEY is empty: the assistant will run in retrieval-only mode (all other features work)."
+if ($envText -notmatch "(?m)^(LLM_API_KEY|OPENAI_API_KEY|GEMINI_API_KEY)=\S+") {
+  Write-Warning "No LLM key is set (OPENAI_API_KEY, GEMINI_API_KEY or LLM_API_KEY): the assistant will run in retrieval-only mode (all other features work)."
 }
 
 Write-Host "== Ingesting NASA data (read-only on source folders)"

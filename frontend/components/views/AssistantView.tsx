@@ -41,7 +41,7 @@ function llmErrorText(kind: string, retryAfter?: number | null): string {
     case "rate_limit": return `The AI service's free request quota is used up for now.${wait}`;
     case "unavailable": return "The AI service is temporarily unavailable (Google reports it as overloaded or unreachable).";
     case "timeout": return "The AI service did not respond in time.";
-    case "auth": return "The AI service rejected the configured credentials (check LLM_API_KEY in .env).";
+    case "auth": return "The AI service rejected the configured credentials (check the provider key in .env: OPENAI_API_KEY, GEMINI_API_KEY or LLM_API_KEY).";
     case "bad_request": return "The AI service could not use the configured model or request (check LLM_MODEL in .env).";
     case "refusal": return "The AI model declined to answer this question.";
     case "bad_output": return "The AI model returned an answer that could not be used.";
