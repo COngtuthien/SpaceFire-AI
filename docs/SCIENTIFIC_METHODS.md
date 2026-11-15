@@ -57,7 +57,9 @@ untrusted data. Each claim must cite existing evidence IDs and every number in i
 claims trigger one corrective retry, then are removed (status `partial` or `insufficient_evidence`). Operational safety
 thresholds are explicitly out of scope.
 
-Provider: Google Gemini (`gemini-3.8-flash`, official `google-genai` SDK) with JSON-schema output and a low thinking level.
+Provider: OpenAI GPT-4.1 mini (`gpt-4.1-mini`, official `openai` SDK) with strict JSON-schema output, as configured in
+`.env.example`. Google Gemini (`gemini-3.8-flash`, `google-genai` SDK, low thinking level) and Anthropic Claude remain
+selectable with `LLM_PROVIDER`; there is no automatic fallback between providers (`docs/OPENAI_COPILOT_INTEGRATION.md`).
 Experiment evidence carries the column-level dataset rules for its fields (e.g. FLEX `Burning rate; mm` is K in mm²/s), and
 the system prompt requires corrected units, because in live testing the model otherwise repeated the raw header unit.
 The verifier enforces it: a claim or answer sentence giving K in any unit other than mm²/s is rejected (regenerated

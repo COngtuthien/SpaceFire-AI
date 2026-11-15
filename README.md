@@ -4,10 +4,11 @@
 
 ### From NASA Data to Fire Safety Insights
 
-**An interactive research platform that brings ten NASA microgravity combustion investigations together through
-scientific data exploration, interactive 3D visualization and evidence-grounded AI assistance.**
+**An AI-powered research platform for exploring NASA microgravity combustion investigations through scientific data
+analysis, interactive 3D visualization, and evidence-grounded AI assistance.**
 
-[The Challenge](#the-challenge) · [Features](#key-features) · [Gallery](#platform-preview) ·
+[The Challenge](#the-challenge) · [Features](#key-features) ·
+[Research Copilot](#research-copilot--powered-by-openai-gpt-41-mini) · [Gallery](#platform-preview) ·
 [NASA Datasets](#nasa-datasets) · [Architecture](#system-architecture) · [Run it locally](#installation-and-local-demo) ·
 [Limitations](#scientific-accuracy-and-limitations)
 
@@ -19,9 +20,11 @@ scientific data exploration, interactive 3D visualization and evidence-grounded 
 
 | | |
 |---|---|
+| **Full title** | SpaceFire AI: An AI-Powered Platform for Microgravity Combustion Research and Spacecraft Fire Safety |
 | **Event** | NASA Space Apps Challenge 2026: *Flame in Freefall: AI-Powered Fire Safety Insights from Microgravity Combustion Data* |
 | **Research area** | Microgravity combustion, spacecraft fire safety, scientific data exploration |
-| **Built with** | Next.js · React · TypeScript · three.js · FastAPI · Python · SQLite · OpenAI or Gemini (optional) |
+| **Built with** | Next.js · React · TypeScript · three.js · FastAPI · Python · SQLite · OpenAI GPT-4.1 mini |
+| **Repository** | [github.com/COngtuthien/SpaceFire-AI](https://github.com/COngtuthien/SpaceFire-AI) |
 | **Data** | Public NASA Physical Sciences Informatics (PSI) investigations: ten in total, across five scientific domains |
 
 > SpaceFire AI is an independent hackathon project. It is not affiliated with or endorsed by NASA.
@@ -67,7 +70,7 @@ NASA investigations  →  curated scientific data  →  research exploration  �
 | **Combustion & Fire Science Explorer** | Browse records and research collections from all ten investigations across five scientific domains, with dataset-specific filters, provenance on every record, and side-by-side comparison only where records are compatible. | `/experiments` |
 | **Interactive 3D Studios** | Five studios (droplet flame, flame spread, spacecraft fire, gaseous flame, smoke detection). They explain each phenomenon with play/pause, guided timelines, Earth vs microgravity views, part labels and a fullscreen mode. Measured NASA values appear in a separate evidence panel. | `/phenomena/*#studio` |
 | **Scientific Analysis** | Investigate source-backed measurements: the FLEX extinction map, d²-law consistency check, BASS-II report tables, CFI-G outcomes and cool-flame events, SAME particle sizes, and PSI-117 experiment vs model series. | `/phenomena/*` |
-| **Research Copilot** | Ask a scientific question. It retrieves NASA document passages, curated records and knowledge-graph facts. With an OpenAI or Gemini key it writes an answer whose citations and numbers are verified in code; without one it shows the evidence only. It declines safety-certification and prediction requests. | `/copilot` |
+| **Research Copilot** | Ask a scientific question. It retrieves NASA document passages, curated records and knowledge-graph facts, and OpenAI GPT-4.1 mini writes an answer from that evidence. Its citations and numbers are verified in code. Without an API key, or when the model is unavailable, it shows the evidence only. It declines safety-certification and prediction requests. | `/copilot` |
 | **Find Similar Experiments** | Find tests with similar *starting conditions* (Gower distance) in FLEX, BASS-II or ACME CFI-G. This searches only the locally processed NASA records, **not Google or the internet**, and never uses outcomes to measure similarity. | `/intelligence/similar` |
 | **Scientific Media & Document Evidence** | Search NASA reports with page-level citations, look up external literature (NASA NTRS, OpenAlex, Crossref), and browse 15 verified NASA photos, clips and animations, each credited and labelled. | `/evidence`, `/evidence/media` |
 | **Guided Demo** | Follow a five-step presentation through the challenge, a research scenario, NASA evidence, a 3D studio and the Copilot. A six-step guide is also available inside the Combustion Explorer. | `/demo` |
@@ -75,6 +78,40 @@ NASA investigations  →  curated scientific data  →  research exploration  �
 Also included: a **Data Reliability** browser that traces each quality flag to its file, row and column (`/reliability`),
 a **Methodology** page (`/methodology`), Light/Dark/System themes, and an **Exploratory FLEX Burn-Time Estimator**
 (`/modeling`), an advanced research tool with a visible validation summary that is not a physical simulation.
+
+## Research Copilot — Powered by OpenAI GPT-4.1 mini
+
+The Copilot answers scientific questions from NASA evidence. The language model writes the explanation, and the
+application decides what evidence it sees and which of its statements are shown. For each question the Copilot:
+
+1. **Retrieves relevant NASA research evidence**: it searches the NASA reports (SQLite FTS5 plus a local LSA semantic
+   index) and returns passages with PDF page numbers.
+2. **Uses the Scientific Knowledge Graph and the RAG pipeline**: whitelisted tools add knowledge-graph facts, curated
+   NASA records and computed analyses to a single evidence pack.
+3. **Generates a source-grounded explanation**: OpenAI GPT-4.1 mini (official `openai` SDK, structured JSON output)
+   receives only that evidence pack and must cite it.
+4. **Validates citation references in code**: every cited source must be one that was actually retrieved, and every
+   number must appear in the cited evidence. A failing statement gets one correction request; if it still fails, it is
+   removed and the answer is marked *partial*.
+5. **Handles unsupported questions**: it declines requests for safety certification, safe thresholds and fire
+   predictions without calling the model, and reports *insufficient evidence* when the NASA sources do not cover a
+   question.
+6. **Falls back to evidence only** when no API key is set or the model is unavailable (timeout, quota, outage). The
+   retrieved NASA sources are still shown, and nothing is presented as AI-written.
+
+<p align="center">
+  <img src="docs/assets/screenshots/research-copilot-openai.webp" alt="Research Copilot answer written by gpt-4.1-mini with one verified statement citing the CFI-G Final Report" width="100%">
+  <br><sub><b>Research Copilot with OpenAI GPT-4.1 mini</b>: a real answer (<code>gpt-4.1-mini-2025-04-14</code>) to "What
+  experimental conditions produced the reported cool flames in ACME CFI-G?", shown from the app's saved-answer cache
+  and re-verified on display. Verification kept the cool-flame radii (5.1–7.6 mm) and durations (about 3.4–14 s) from
+  Final Report Table 3. It removed a statement whose oxygen range did not match the cited table, so the answer is
+  marked <i>partial</i>.</sub>
+</p>
+
+Verification checks citations and numbers, not reasoning or attribution. A verified statement can still over-generalize,
+so the cited NASA passages are always shown beside the answer. **Google Gemini** (`gemini-3.8-flash`) and **Anthropic
+Claude** remain available as optional providers selected in `.env`. Neither is used as an automatic fallback. Adapter
+details and live test results are in [`docs/OPENAI_COPILOT_INTEGRATION.md`](docs/OPENAI_COPILOT_INTEGRATION.md).
 
 ## Platform Preview
 
@@ -138,12 +175,12 @@ a **Methodology** page (`/methodology`), Light/Dark/System themes, and an **Expl
     <td width="50%"><img src="docs/assets/screenshots/guided-demo.webp" alt="Guided demo step 3 of 5 on the Gaseous Flame Behavior scenario"></td>
   </tr>
   <tr>
-    <td><sub><b>Research Copilot</b>, shown in <i>evidence-only mode</i> (no AI key configured): retrieved CFI-G Final Report passages with PDF page citations; nothing in this view is AI-written.</sub></td>
+    <td><sub><b>Research Copilot</b>, shown in <i>evidence-only mode</i> (the fallback when no AI key is configured or the model is unavailable): retrieved CFI-G Final Report passages with PDF page citations; nothing in this view is AI-written.</sub></td>
     <td><sub><b>Guided Demo</b>: step 3 of 5, "Explore NASA evidence", with presenter notes, evidence and limits for the scenario.</sub></td>
   </tr>
 </table>
 
-<sub>All images are real screenshots of the running application (1440 × 900, dark theme). See
+<sub>All images in this README are real screenshots of the running application (1440 × 900, dark theme). See
 <a href="docs/README_REFRESH_REPORT.md">docs/README_REFRESH_REPORT.md</a> for how each one was captured.</sub>
 
 ## NASA Datasets
@@ -180,7 +217,7 @@ Methods and evidence rules are described in [`docs/SCIENTIFIC_METHODS.md`](docs/
 | **Backend** | Python 3.11+ (tested on 3.13), FastAPI, Uvicorn, Pydantic |
 | **Scientific data** | pandas, NumPy, SciPy, scikit-learn; PyMuPDF, python-docx, python-pptx and openpyxl for source documents |
 | **Storage & retrieval** | SQLite with FTS5 (BM25) + local LSA semantic index; provenance-tracked knowledge graph in SQLite |
-| **AI** | OpenAI via the official `openai` SDK (default `gpt-4.1-mini`) or Google Gemini via `google-genai` (optional; Anthropic Claude also supported), with in-code claim and citation verification |
+| **AI** | OpenAI GPT-4.1 mini via the official `openai` SDK (the configuration in `.env.example`); Google Gemini (`google-genai`) and Anthropic Claude as optional providers; retrieval-augmented generation over NASA sources with in-code citation and number verification |
 | **External literature** | NASA NTRS, OpenAlex, Crossref (metadata only) |
 | **Testing** | pytest, respx, Playwright |
 
@@ -188,26 +225,30 @@ Methods and evidence rules are described in [`docs/SCIENTIFIC_METHODS.md`](docs/
 
 ```mermaid
 flowchart LR
-    A["NASA PSI sources<br/>CSV tables · reports · figures · metadata"] --> B["Ingestion & curation<br/>backend/app/ingest"]
-    B --> C[("SQLite<br/>records · provenance · FTS5")]
+    A["NASA research data<br/>PSI CSV tables · reports · figures · metadata"] --> B["Data processing<br/>backend/app/ingest"]
+    B --> C[("Scientific database<br/>SQLite records · provenance · FTS5")]
     B --> D["Knowledge graph<br/>& LSA index"]
     C --> E["FastAPI<br/>/api/v1"]
     D --> E
     E --> F["Scientific services<br/>analytics · explorer · similarity"]
-    E --> G["Research Copilot<br/>retrieval + verified synthesis"]
-    G -. optional .-> H["OpenAI or Gemini"]
+    E --> R["RAG retrieval<br/>document search · graph tools · curated records"]
+    R --> M["OpenAI GPT-4.1 mini<br/>sees the evidence pack only"]
+    M --> V["Citation & number<br/>verification in code"]
+    V --> G["Research Copilot<br/>with NASA citations"]
+    R -.->|evidence-only fallback| G
     F --> I["Next.js interface"]
     G --> I
     I --> J["Interactive 3D studios<br/>three.js"]
 ```
 
-- **Ingestion** (`backend/app/ingest/`) parses the NASA files deterministically and writes only to `processed/`. Raw
-  cells are preserved next to the parsed values, and the original NASA folders are never modified.
+- **Data processing** (`backend/app/ingest/`) parses the NASA files deterministically and writes only to `processed/`.
+  Raw cells are preserved next to the parsed values, and the original NASA folders are never modified.
 - **The knowledge graph** links investigations, experiments, documents, materials and findings (1,588 nodes and 7,223
   edges in the full local build). The Research-to-Safety Explorer and the Copilot both query it.
-- **The Copilot** runs whitelisted tools and hybrid document search, then passes only that evidence to the model.
-  Code checks that every cited id exists and that every number appears in the cited evidence; statements that fail
-  are removed.
+- **The Copilot** runs whitelisted tools and hybrid document search, then passes only that evidence to OpenAI
+  GPT-4.1 mini (or the provider set in `.env`). Code checks that every cited id exists and that every number appears in
+  the cited evidence; statements that fail are removed. Without a key, or when the model fails, the retrieved evidence
+  is shown on its own.
 - **The frontend** calls the backend through a same-origin `/api/v1` proxy, so API keys never reach the browser.
 
 ## Installation and Local Demo
@@ -216,29 +257,35 @@ flowchart LR
 
 - Python 3.11+ (tested on 3.13)
 - Node.js 20+ and npm
-- No GPU and no model downloads required. An OpenAI or Gemini API key is optional.
+- No GPU and no model downloads required. An OpenAI API key is optional; it is only needed for AI-written Copilot
+  answers.
 
 ### 1. Clone and configure (Windows CMD)
 
 ```bat
-git clone https://github.com/COngtuthien/NASA-Hackathon.git
-cd NASA-Hackathon
+git clone https://github.com/COngtuthien/SpaceFire-AI.git
+cd SpaceFire-AI
 copy .env.example .env
 ```
 
-All settings in `.env` are optional. To enable AI-written answers, set your own key:
+The backend reads `.env` from the repository root. To enable AI-written answers with the official OpenAI API, open
+`.env` (for example `notepad .env`) and set your own key:
 
-```ini
+```dotenv
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4.1-mini
-OPENAI_API_KEY=<your-openai-api-key>
+OPENAI_API_KEY=your-openai-api-key
+LLM_TIMEOUT_S=45
 ```
 
-For Gemini instead, use `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.8-flash` and `GEMINI_API_KEY`. Each key is sent
-only to the provider named in `LLM_PROVIDER`, and there is no automatic fallback between providers.
+The key needs billing enabled on its OpenAI project. Requests are billed to that project.
+
+**Switching providers.** For Gemini, set `LLM_PROVIDER=gemini`, `LLM_MODEL=gemini-3.8-flash` and `GEMINI_API_KEY`.
+Each provider reads its own key variable and falls back to `LLM_API_KEY`. A key is sent only to the provider named in
+`LLM_PROVIDER`, and there is no automatic fallback between providers. Restart the backend after editing `.env`.
 
 Without a key, the Copilot runs in **evidence-only mode**: search, tools and citations still work, and no text is
-AI-written. Never commit `.env`.
+AI-written. `.env` is gitignored; never commit it or put a key in frontend code.
 
 ### 2. Backend setup and data build (Windows CMD)
 
@@ -280,7 +327,14 @@ For a production build instead of development mode, run `npm run build` and then
 
 Open **http://localhost:3000**. The API documentation is at http://127.0.0.1:8000/docs.
 
-### 5. Open the Guided Demo
+### 5. Ask the Research Copilot
+
+Open **http://localhost:3000/copilot**. With a key configured, the Copilot panel shows **AI synthesis on**, and each
+answer names the model that wrote it ("Written by gpt-4.1-mini-…"). The active provider, model and mode are also
+reported at http://127.0.0.1:8000/api/v1/health under `llm`. The response names the variable that supplied the key, never
+the key itself.
+
+### 6. Open the Guided Demo
 
 Go to **http://localhost:3000/demo**, or press **Start guided demo** on the Home page. The demo bar walks you through
 the challenge, a research scenario, NASA evidence, a 3D studio and the Research Copilot, with presenter notes on each
@@ -289,10 +343,12 @@ step.
 <details>
 <summary><b>PowerShell, Linux/macOS scripts and alternate ports</b></summary>
 
-**PowerShell** (one-step setup and start, backend on 8000 and frontend on 3000):
+**PowerShell** (recommended one-step setup and start, backend on 8000 and frontend on 3000). `setup.ps1` installs
+the backend and frontend dependencies, creates `.env` from `.env.example` if it is missing, and builds the database:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
+notepad .env                                                        # add OPENAI_API_KEY (optional)
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1          # add -Prod for a production build
 ```
 
@@ -303,7 +359,8 @@ bash scripts/setup.sh
 bash scripts/start.sh
 ```
 
-**Running beside another local instance (Windows CMD).** Build into a separate folder and serve it on other ports:
+**Optional: running beside another local instance (Windows CMD).** The standard setup above uses ports 8000 and
+3000. To run a second copy alongside it, build into a separate folder and serve it on other ports:
 
 ```bat
 :: Backend on 8010
@@ -366,13 +423,14 @@ SpaceFire AI supports **scientific exploration and interpretation**. It is not a
   fire predictions.
 - **The FLEX Burn-Time Estimator is exploratory.** It is a statistical estimate within FLEX conditions (median error
   about 35 %), not a validated physical simulation ([`docs/PHASE16_PREDICTION_REVIEW.md`](docs/PHASE16_PREDICTION_REVIEW.md)).
-- **AI verification checks citations and numbers, not reasoning.** Provider quotas, billing limits or timeouts can
-  block AI-written answers; the Copilot then falls back to evidence only.
+- **AI verification checks citations and numbers, not reasoning or attribution.** A generated statement is not
+  guaranteed to be correct, even when it passes verification. Provider quotas, billing limits or timeouts can block
+  AI-written answers; the Copilot then falls back to evidence only.
 
 ## Project Structure
 
 ```
-NASA-Hackathon/
+SpaceFire-AI/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/          # FastAPI routes
@@ -418,6 +476,7 @@ does not include a license file.
 |---|---|
 | Scientific methods and assumptions | [`docs/SCIENTIFIC_METHODS.md`](docs/SCIENTIFIC_METHODS.md) |
 | Combustion Explorer and evidence levels | [`docs/PHASE16_COMBUSTION_EXPLORER.md`](docs/PHASE16_COMBUSTION_EXPLORER.md) |
+| Research Copilot with OpenAI | [`docs/OPENAI_COPILOT_INTEGRATION.md`](docs/OPENAI_COPILOT_INTEGRATION.md) |
 | Knowledge graph | [`docs/PHASE14_KNOWLEDGE_GRAPH.md`](docs/PHASE14_KNOWLEDGE_GRAPH.md) |
 | Ranking methodology | [`docs/PHASE14_RANKING_METHODOLOGY.md`](docs/PHASE14_RANKING_METHODOLOGY.md) |
 | Interactive 3D science | [`docs/INTERACTIVE_SCIENTIFIC_ANALYSIS_V2.md`](docs/INTERACTIVE_SCIENTIFIC_ANALYSIS_V2.md) |

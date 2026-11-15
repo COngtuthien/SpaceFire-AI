@@ -5,7 +5,7 @@
 **Project:** SpaceFire AI — Evidence-Grounded Microgravity Combustion Intelligence  
 **Challenge:** NASA Space Apps Challenge 2026 — Flame in Freefall: AI-Powered Fire Safety Insights from Microgravity Combustion Data  
 **Local workspace:** `D:\NASA Hackathon`  
-**Repository:** `https://github.com/COngtuthien/NASA-Hackathon`  
+**Repository:** `https://github.com/COngtuthien/SpaceFire-AI` (renamed from `NASA-Hackathon`)  
 **Primary language:** English UI; Vietnamese in research notes / optional user-query language  
 **Implementation strategy:** Full P0 + P1, one verified end-to-end vertical slice at a time; P2 conditional.  
 **Mockup:** dark aerospace dashboard already provided in conversation; visual *reference*, never evidence of real measurements.
